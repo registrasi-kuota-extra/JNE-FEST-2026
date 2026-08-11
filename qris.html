@@ -4,21 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B14">
-<meta name="description" content="Halaman pembayaran QRIS untuk tiket JNS 2026 - for Revenge di Tegal.">
 <title>Pembayaran QRIS — JNS 2026</title>
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
-<!-- EmailJS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
   (function() {
-    emailjs.init({
-      publicKey: "KbdJonjqqCiMUSaHf",
-    });
+    emailjs.init({ publicKey: "KbdJonjqqCiMUSaHf" });
   })();
 </script>
 
@@ -175,6 +171,7 @@
     background: linear-gradient(135deg, var(--primary), #FF8C00);
     color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; transition: 0.3s;
     box-shadow: 0 8px 24px rgba(255, 107, 0, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: inherit;
   }
   .btn-pay:disabled { background: rgba(255,255,255,0.1); box-shadow: none; cursor: not-allowed; }
   .btn-pay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(255, 107, 0, 0.4); }
@@ -189,6 +186,15 @@
   .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #fff; color: #000; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.error { background: var(--danger); color: #fff; }
+
+  .pending-btn {
+    position: fixed; top: 70px; right: 16px; z-index: 50;
+    background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);
+    color: var(--danger); font-size: 11px; font-weight: 700; padding: 6px 12px;
+    border-radius: 999px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: 0.2s;
+  }
+  .pending-btn:hover { background: rgba(239, 68, 68, 0.25); }
 </style>
 </head>
 <body>
@@ -212,7 +218,12 @@
   <div class="step"><div class="step-num">4</div></div>
 </div>
 
+<button class="pending-btn" id="pendingBtn" type="button" title="Simulasi: Limit QRIS tercapai">
+  <i class="fa-solid fa-triangle-exclamation"></i> Limit Tercapai?
+</button>
+
 <div class="container">
+  
   <div class="card">
     <div class="order-label">Order ID</div>
     <div id="orderId" class="order-id">JNS-000000</div>
@@ -248,7 +259,7 @@
       <div class="upload-area">
         <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
         <h3>Upload Bukti Pembayaran</h3>
-        <p>Klik untuk memilih gambar (JPG/PNG)</p>
+        <p>Klik untuk memilih gambar (JPG/PNG, maks 1MB)</p>
       </div>
     </label>
     <input id="file" hidden type="file" accept="image/*">
@@ -264,7 +275,7 @@
 </div>
 
 <div class="bottom-bar">
-  <button id="btnPay" class="btn-pay" disabled>
+  <button id="btnPay" class="btn-pay" disabled type="button">
     <i class="fa-solid fa-lock"></i> KONFIRMASI PEMBAYARAN
   </button>
 </div>
@@ -278,15 +289,25 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const order = JSON.parse(localStorage.getItem('goers_order') || '{}');
-  const orderId = localStorage.getItem('goers_order_id') || 'JNS-000000';
+  'use strict';
 
-  if (!order.detail_pesanan) {
-    window.location.href = 'index.html';
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  const order = JSON.parse(localStorage.getItem('jns_order') || '{}');
+  const orderId = localStorage.getItem('jns_order_id') || 'JNS-000000';
+
+  if (!order.detail_pesanan || order.detail_pesanan.length === 0) {
+    showToast('Data pesanan tidak ditemukan', 'error');
+    setTimeout(() => window.location.href = 'index.html', 1500);
   }
 
   const totalStr = 'Rp ' + Number(order.total_bayar || 0).toLocaleString('id-ID');
-  const tiketText = order.detail_pesanan.map(i => `${i.name} (${i.qty}x)`).join(', ');
+  const tiketText = (order.detail_pesanan || []).map(i => i.name + ' (' + i.qty + 'x)').join(', ');
 
   document.getElementById('orderId').textContent = orderId;
   document.getElementById('total').textContent = totalStr;
@@ -302,17 +323,21 @@
     if (duration <= 0) {
       clearInterval(timerInterval);
       showToast('Waktu habis! Silakan pesan ulang.', 'error');
-      setTimeout(() => window.location.href = 'index.html', 2000);
+      try {
+        sessionStorage.setItem('jns_flow_step', 'pending_timeout');
+      } catch(e) {}
+      setTimeout(() => window.location.href = 'pending.html', 2000);
       return;
     }
     let m = Math.floor(duration / 60);
     let s = duration % 60;
-    timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     if (duration <= 60) timerEl.classList.add('urgent');
     duration--;
   }, 1000);
 
   let uploadedFile = null;
+  const MAX_FILE_SIZE = 1024 * 1024;
   let fileInput = document.getElementById('file');
   let previewBox = document.getElementById('previewBox');
   let previewImg = document.getElementById('previewImg');
@@ -321,7 +346,15 @@
 
   fileInput.addEventListener('change', function(e) {
     if (this.files && this.files[0]) {
-      uploadedFile = this.files[0];
+      const file = this.files[0];
+      
+      if (file.size > MAX_FILE_SIZE) {
+        showToast('Ukuran file melebihi 1MB. Silakan kompres.', 'error');
+        this.value = '';
+        return;
+      }
+      
+      uploadedFile = file;
       const reader = new FileReader();
       reader.onload = (ev) => {
         previewImg.src = ev.target.result;
@@ -338,12 +371,16 @@
     btnPay.disabled = !(uploadedFile && cekBox.checked);
   }
 
-  function showToast(msg, type) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (type ? ' ' + type : '');
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
+  document.getElementById('pendingBtn').addEventListener('click', function() {
+    if (!confirm('Simulasi: Limit QRIS tercapai. Lanjutkan ke halaman pending?')) return;
+    
+    try {
+      sessionStorage.setItem('jns_flow_step', 'pending_limit');
+      sessionStorage.setItem('jns_pending_reason', 'limit_reached');
+    } catch(e) {}
+    
+    window.location.href = 'pending.html';
+  });
 
   btnPay.addEventListener('click', function() {
     if (btnPay.disabled) return;
@@ -358,7 +395,7 @@
       const base64File = e.target.result.split(',')[1];
       
       const templateParams = {
-        to_name: "Admin JNS 2026",
+        to_name: "Admin JNS Festival",
         from_name: order.nama,
         reply_to: order.email,
         order_id: orderId,
@@ -380,19 +417,25 @@
 
       Promise.all([adminEmail, autoReplyEmail])
         .then(function(responses) {
-          console.log('Email admin & auto-reply berhasil terkirim!', responses);
+          console.log('Email terkirim!', responses);
           loadingSub.textContent = 'Pembayaran dikonfirmasi!';
           
-          localStorage.removeItem('goers_order');
-          localStorage.removeItem('goers_order_id');
+          try {
+            sessionStorage.setItem('jns_last_order', JSON.stringify(order));
+            sessionStorage.setItem('jns_flow_step', 'success');
+          } catch(e) {}
           
           setTimeout(() => {
-            // DIARAHKAN KE pending.html
-            window.location.href = 'pending.html';
+            try {
+              localStorage.removeItem('jns_order');
+              localStorage.removeItem('jns_order_id');
+              sessionStorage.removeItem('jns_order_id');
+            } catch(e) {}
+            window.location.href = 'success.html';
           }, 1500);
         })
         .catch(function(error) {
-          console.log('Gagal mengirim salah satu email...', error);
+          console.log('Gagal mengirim email:', error);
           loading.classList.remove('active');
           showToast('Gagal mengirim data. Coba lagi.', 'error');
         });
