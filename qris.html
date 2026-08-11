@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B14">
+<meta name="description" content="Halaman pembayaran QRIS untuk tiket JNS 2026 - for Revenge di Tegal.">
+<title>Pembayaran QRIS — JNS 2026</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  (function() {
+    emailjs.init({
+      publicKey: "KbdJonjqqCiMUSaHf",
+    });
+  })();
+</script>
+
+<style>
+  :root {
+    --bg-main: #0B0B14;
+    --bg-grad-1: #1A1208;
+    --bg-grad-2: #0B0B14;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-main: #FFFFFF;
+    --text-muted: #9CA3AF;
+    --warning: #F59E0B;
+    --warning-dark: #D97706;
+    --warning-glow: rgba(245, 158, 11, 0.4);
+    --danger: #EF4444;
+    --success: #10B981;
+    --gold: #F5C842;
+    --primary: #FF6B00;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    padding-bottom: 100px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Background Effects */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(900px circle at 10% 10%, rgba(245, 158, 11, 0.15), transparent 50%),
+      radial-gradient(700px circle at 90% 20%, rgba(255, 107, 0, 0.08), transparent 50%),
+      linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
+    z-index: -2;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+    z-index: -1;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  .container { max-width: 600px; margin: auto; padding: 20px; }
+
+  /* Header */
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px;
+    background: rgba(11, 11, 20, 0.7);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--card-border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-img { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; }
+  .topbar-right { display: flex; gap: 10px; }
+  .topbar-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);
+    color: var(--warning); font-size: 12px; font-weight: 600;
+  }
+
+  /* Steps */
+  .steps { padding: 20px 24px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .step { display: flex; align-items: center; gap: 6px; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    background: rgba(255,255,255,0.1); color: var(--text-muted);
+  }
+  .step.done .step-num { background: var(--success); color: #fff; }
+  .step.active .step-num { background: var(--warning); color: #fff; box-shadow: 0 0 12px var(--warning-glow); }
+  .step-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .step.active .step-label { color: var(--text-main); font-weight: 700; }
+  .step-divider { width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .step.done + .step-divider { background: var(--success); }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    animation: fadeUp 0.6s cubic-bezier(.2,.8,.2,1) backwards;
+  }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Summary Card */
+  .order-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; }
+  .order-id { color: var(--gold); font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; margin-bottom: 16px; word-break: break-all; }
+  .total-label { font-size: 12px; color: var(--text-muted); margin-top: 16px; }
+  .total-price { font-size: 32px; font-family: 'Space Grotesk'; font-weight: 700; color: var(--text-main); letter-spacing: -1px; line-height: 1.1; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--card-border); }
+  .detail-item { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .detail-item span { display: block; font-size: 14px; color: var(--text-main); font-weight: 600; text-transform: none; letter-spacing: 0; margin-top: 4px; font-family: 'Space Grotesk'; word-break: break-word; }
+
+  /* QRIS Card */
+  .timer-box {
+    text-align: center; margin-bottom: 20px; padding: 12px;
+    background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 12px;
+  }
+  .timer-label { font-size: 11px; color: var(--warning); font-weight: 600; margin-bottom: 4px; }
+  .timer { font-family: 'Space Grotesk'; font-size: 28px; font-weight: 700; color: #fff; letter-spacing: 2px; }
+  .timer.urgent { color: var(--danger); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.6; } }
+
+  .qr-wrap {
+    background: #fff; padding: 20px; border-radius: 20px; display: inline-block;
+    position: relative; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .qr-wrap img { width: 220px; height: 220px; display: block; }
+  
+  .qr-info { margin-top: 16px; text-align: center; }
+  .qr-amount { font-family: 'Space Grotesk'; font-size: 20px; font-weight: 700; color: var(--gold); }
+  .qr-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Upload Card */
+  .upload-area {
+    border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 32px 20px;
+    text-align: center; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.02);
+  }
+  .upload-area:hover { border-color: var(--warning); background: rgba(245,158,11,0.05); }
+  .upload-icon { width: 50px; height: 50px; margin: 0 auto 12px; background: rgba(245,158,11,0.1); color: var(--warning); border-radius: 50%; display: grid; place-items: center; font-size: 20px; }
+  .upload-area h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .upload-area p { font-size: 12px; color: var(--text-muted); }
+  
+  .preview-box { margin-top: 16px; display: none; }
+  .preview-box img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 12px; border: 1px solid var(--card-border); background: #fff; }
+  .check-btn { margin-top: 12px; width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px; color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+  .check-btn input { width: 18px; height: 18px; accent-color: var(--warning); }
+
+  /* Sticky CTA */
+  .bottom-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 20px calc(14px + var(--safe-bottom));
+    background: rgba(11, 11, 20, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--card-border); z-index: 90;
+  }
+  .btn-pay {
+    width: 100%; padding: 16px; border: none; border-radius: 14px;
+    background: linear-gradient(135deg, var(--primary), #FF8C00);
+    color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; transition: 0.3s;
+    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-pay:disabled { background: rgba(255,255,255,0.1); box-shadow: none; cursor: not-allowed; }
+  .btn-pay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(255, 107, 0, 0.4); }
+
+  /* Loading Overlay */
+  .loading-overlay { position: fixed; inset: 0; background: rgba(11,11,20,0.95); z-index: 999; display: none; align-items: center; justify-content: center; flex-direction: column; }
+  .loading-overlay.active { display: flex; }
+  .loader { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 18px; font-weight: 700; }
+  .loading-sub { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #fff; color: #000; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="logo-wrap">
+    <img src="logo.png" alt="Logo JNS 2026" class="logo-img">
+  </a>
+  <div class="topbar-right">
+    <div class="topbar-chip"><i class="fa-solid fa-circle-exclamation"></i> Menunggu Bayar</div>
+  </div>
+</div>
+
+<div class="steps">
+  <div class="step done"><div class="step-num"><i class="fa-solid fa-check" style="font-size:10px"></i></div></div>
+  <div class="step-divider"></div>
+  <div class="step done"><div class="step-num"><i class="fa-solid fa-check" style="font-size:10px"></i></div></div>
+  <div class="step-divider"></div>
+  <div class="step active"><div class="step-num">3</div><div class="step-label">Pembayaran</div></div>
+  <div class="step-divider"></div>
+  <div class="step"><div class="step-num">4</div></div>
+</div>
+
+<div class="container">
+  
+  <div class="card">
+    <div class="order-label">Order ID</div>
+    <div id="orderId" class="order-id">JNS-000000</div>
+    
+    <div class="total-label">Total Pembayaran</div>
+    <div id="total" class="total-price">Rp 0</div>
+
+    <div class="detail-grid">
+      <div class="detail-item">Nama Pemesan<span id="namaPemesan">-</span></div>
+      <div class="detail-item">No. WhatsApp<span id="waPemesan">-</span></div>
+      <div class="detail-item">Kategori Tiket<span id="jenisTiket">-</span></div>
+      <div class="detail-item">Jumlah Tiket<span id="jumlahTiket">0</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="text-align: center;">
+    <div class="timer-box">
+      <div class="timer-label">Selesaikan pembayaran dalam</div>
+      <div id="timer" class="timer">15:00</div>
+    </div>
+    
+    <div class="qr-wrap">
+      <img src="qris.png" alt="QRIS JNS 2026">
+      <div class="qr-info">
+        <div class="qr-amount" id="totalGlow">Rp 0</div>
+        <div class="qr-hint">Scan via OVO, GoPay, Dana, ShopeePay, atau Mobile Banking</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="file" style="display:block;cursor:pointer;">
+      <div class="upload-area">
+        <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+        <h3>Upload Bukti Pembayaran</h3>
+        <p>Klik untuk memilih gambar (JPG/PNG)</p>
+      </div>
+    </label>
+    <input id="file" hidden type="file" accept="image/*">
+
+    <div class="preview-box" id="previewBox">
+      <img id="previewImg" alt="Preview Bukti">
+      <div class="check-btn">
+        <input type="checkbox" id="cek">
+        <label for="cek" style="cursor:pointer; flex:1; font-size:13px; color:var(--text-muted);">Saya sudah transfer dan mengunggah bukti yang benar.</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button id="btnPay" class="btn-pay" disabled>
+    <i class="fa-solid fa-lock"></i> KONFIRMASI PEMBAYARAN
+  </button>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader"></div>
+  <div class="loading-text">Memproses Pembayaran...</div>
+  <div class="loading-sub" id="loadingSub">Mengirim data ke server</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // === LOAD DATA ===
+  const order = JSON.parse(localStorage.getItem('goers_order') || '{}');
+  const orderId = localStorage.getItem('goers_order_id') || 'JNS-000000';
+
+  if (!order.detail_pesanan) {
+    window.location.href = 'index.html';
+  }
+
+  const totalStr = 'Rp ' + Number(order.total_bayar || 0).toLocaleString('id-ID');
+  const tiketText = order.detail_pesanan.map(i => `${i.name} (${i.qty}x)`).join(', ');
+
+  document.getElementById('orderId').textContent = orderId;
+  document.getElementById('total').textContent = totalStr;
+  document.getElementById('totalGlow').textContent = totalStr;
+  document.getElementById('namaPemesan').textContent = order.nama || '-';
+  document.getElementById('waPemesan').textContent = order.wa || '-';
+  document.getElementById('jenisTiket').textContent = tiketText;
+  document.getElementById('jumlahTiket').textContent = order.jumlah_tiket || 0;
+
+  // === TIMER ===
+  let duration = 900;
+  const timerEl = document.getElementById('timer');
+  let timerInterval = setInterval(() => {
+    if (duration <= 0) {
+      clearInterval(timerInterval);
+      showToast('Waktu habis! Silakan pesan ulang.', 'error');
+      setTimeout(() => window.location.href = 'index.html', 2000);
+      return;
+    }
+    let m = Math.floor(duration / 60);
+    let s = duration % 60;
+    timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (duration <= 60) timerEl.classList.add('urgent');
+    duration--;
+  }, 1000);
+
+  // === UPLOAD & PREVIEW ===
+  let uploadedFile = null;
+  let fileInput = document.getElementById('file');
+  let previewBox = document.getElementById('previewBox');
+  let previewImg = document.getElementById('previewImg');
+  let cekBox = document.getElementById('cek');
+  let btnPay = document.getElementById('btnPay');
+
+  fileInput.addEventListener('change', function(e) {
+    if (this.files && this.files[0]) {
+      uploadedFile = this.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        previewImg.src = ev.target.result;
+        previewBox.style.display = 'block';
+        checkValid();
+      };
+      reader.readAsDataURL(uploadedFile);
+    }
+  });
+
+  cekBox.addEventListener('change', checkValid);
+
+  function checkValid() {
+    btnPay.disabled = !(uploadedFile && cekBox.checked);
+  }
+
+  // === TOAST ===
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // === EMAILJS & SUBMIT (ADMIN + AUTO REPLY) ===
+  btnPay.addEventListener('click', function() {
+    if (btnPay.disabled) return;
+    
+    const loading = document.getElementById('loadingOverlay');
+    const loadingSub = document.getElementById('loadingSub');
+    loading.classList.add('active');
+    loadingSub.textContent = 'Mengunggah bukti pembayaran...';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64File = e.target.result.split(',')[1];
+      
+      // Parameter yang akan dikirim ke EmailJS
+      const templateParams = {
+        to_name: "Admin JNS 2026",
+        from_name: order.nama,
+        reply_to: order.email, // Email pemesan (untuk auto-reply)
+        order_id: orderId,
+        nama_pemesan: order.nama,
+        wa_pemesan: order.wa,
+        email_pemesan: order.email,
+        tiket: tiketText,
+        jumlah: order.jumlah_tiket,
+        total_bayar: totalStr,
+        status_pembayaran: "PENDING",
+        // Lampiran (Maks 50KB - 1MB tergantung paket EmailJS)
+        attachment: base64File,
+        file_name: uploadedFile.name
+      };
+
+      loadingSub.textContent = 'Mengirim email ke admin & pembeli...';
+
+      // 1. KIRIM EMAIL KE ADMIN (template_6of1na4)
+      const adminEmail = emailjs.send('service_u5w94nj', 'template_6of1na4', templateParams);
+      
+      // 2. KIRIM AUTO-REPLY KE PEMESAN (template_autoreply) 
+      const autoReplyEmail = emailjs.send('service_u5w94nj', 'template_autoreply', templateParams);
+
+      // Jalankan kedua pengiriman secara bersamaan
+      Promise.all([adminEmail, autoReplyEmail])
+        .then(function(responses) {
+          console.log('Email admin & auto-reply berhasil terkirim!', responses);
+          loadingSub.textContent = 'Pembayaran dikonfirmasi!';
+          
+          // Hapus data lokal
+          localStorage.removeItem('goers_order');
+          localStorage.removeItem('goers_order_id');
+          
+          setTimeout(() => {
+            window.location.href = 'success.html';
+          }, 1500);
+        })
+        .catch(function(error) {
+          console.log('Gagal mengirim salah satu email...', error);
+          loading.classList.remove('active');
+          showToast('Gagal mengirim data. Coba lagi.', 'error');
+        });
+    };
+    reader.readAsDataURL(uploadedFile);
+  });
+</script>
+
+</body>
+</html>
